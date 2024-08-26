@@ -85,6 +85,16 @@ int countMines() {
     }
     return mineCount;
 }
+void placeMineCount(){
+    for(int i = 0; i < map_size_y; i++){
+        for(int j = 0; j < map_size_x; j++){
+            if(!isMine(i,j)) {
+                int numMines = countAdjMines(i, j);
+                board[i][j] = numMines;
+            }
+        }
+    }
+}
 void loop(){
     sf::Event e;
     while(app.isOpen()){
@@ -110,7 +120,7 @@ void loop(){
                     sprite.scale(sf::Vector2f((float)squareSize / (float)mine.getSize().x, (float)squareSize / (float)mine.getSize().y));
                     sprite.setPosition(sf::Vector2f(offsetX + j * squareSize, offsetY + i * squareSize));
                     app.draw(sprite);
-                } else if(board[i][j] > 0) { // Only draw text if there are adjacent mines
+                } else { // Only draw text if there are adjacent mines
                     sf::Color colors[] = {
                         sf::Color::Blue,
                         sf::Color::Green,
@@ -144,7 +154,8 @@ int main(){
     mine.loadFromFile("icons/mine.png");
     font.loadFromFile("arial.ttf");
     generateMap();
-    // printBoard();
+    placeMineCount();
+    printBoard();
     // cout << countMines() << endl;
     loop();
     return 0;
