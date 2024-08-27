@@ -19,7 +19,9 @@ const int offsetY = (windowY - squareSize * map_size_y) / 2;
 const int numMines = 99;
 
 
-int board[map_size_y][map_size_x] = {0};
+int hidden_board[map_size_y][map_size_x];
+int real_board[map_size_y][map_size_x];
+
 sf::RenderWindow app(sf::VideoMode(windowX, windowY), "MineSweeper", sf::Style::Close);
 sf::Color Grey(128, 128, 128);
 sf::Texture mine;
@@ -34,7 +36,7 @@ bool isValid(int row, int col) {
 
 
 bool isMine(int row, int col) {
-    return board[row][col] == -1;
+    return hidden_board[row][col] == -1;
 }
 
 
@@ -56,44 +58,51 @@ int countAdjMines(int row, int col){
 void printBoard() {
     for (int i = 0; i < map_size_y; i++) {
         for (int j = 0; j < map_size_x; j++) {
-            std::cout << board[i][j] << " ";
+            cout << hidden_board[i][j] << " ";
         }
-        std::cout << std::endl;
+        cout << endl;
     }
-}
-void generateMap(){
-    srand(time(0));
-    int placedMines = 0;
-    while(placedMines < numMines){
-        int row = rand() % map_size_y;
-        int col = rand() % map_size_x;
-        if(board[row][col] == 0){
-            board[row][col] = -1;
-            placedMines++;
-        }
-    }
-    // cout << placedMines << endl;
-}
-int countMines() {
-    int mineCount = 0;
-    for (int i = 0; i < map_size_y; i++) {
-        for (int j = 0; j < map_size_x; j++) {
-            if (board[i][j] == -1) {
-                mineCount++;
-            }
-        }
-    }
-    return mineCount;
 }
 void placeMineCount(){
     for(int i = 0; i < map_size_y; i++){
         for(int j = 0; j < map_size_x; j++){
             if(!isMine(i,j)) {
                 int numMines = countAdjMines(i, j);
-                board[i][j] = numMines;
+                hidden_board[i][j] = numMines;
             }
         }
     }
+}
+void generateMap(){
+    for(int i = 0; i < map_size_y; i++) {
+        for (int j = 0; j < map_size_x; j++) {
+            hidden_board[i][j] = 0;
+            real_board[i][j] = 10;  // All tiles start hidden
+        }
+    }
+    srand(time(0));
+    int placedMines = 0;
+    while(placedMines < numMines){
+        int row = rand() % map_size_y;
+        int col = rand() % map_size_x;
+        if(hidden_board[row][col] == 0){
+            hidden_board[row][col] = -1;
+            placedMines++;
+        }
+    }
+    placeMineCount();
+    // cout << placedMines << endl;
+}
+int countMines() {
+    int mineCount = 0;
+    for (int i = 0; i < map_size_y; i++) {
+        for (int j = 0; j < map_size_x; j++) {
+            if (hidden_board[i][j] == -1) {
+                mineCount++;
+            }
+        }
+    }
+    return mineCount;
 }
 void loop(){
     sf::Event e;
@@ -102,7 +111,45 @@ void loop(){
             if(e.type == sf::Event::Closed){
                 app.close();
             }
+            if(e.type == sf::Event::MouseButtonPressed){
+                int x = (int)((e.mouseButton.x - offsetX) / squareSize);
+                int y = (int)((e.mouseButton.y - offsetY) / squareSize);
+
+                if(x < map_size_x && x >= 0 && y < map_size_y && y >= 0){
+                    if(e.mouseButton.button == sf::Mouse::Right){
+                        // Toggle flag
+                        if(real_board[y][x] == 10){  // If the tile is hidden
+                            real_board[y][x] = 9;    // Place a flag
+                        } else if(real_board[y][x] == 9){  // If already flagged
+                            real_board[y][x] = 10;   // Remove the flag
+                        }
+                    }
+                    if(e.mouseButton.button == sf::Mouse::Left){
+                        if(hidden_board[y][x] == -1){
+                            real_board[y][x] = -1;
+                        } else {
+                            real_board[y][x] = hidden_board[y][x];
+                        }
+                    }
+                }
+            }
+            if(e.type == sf::Event::KeyPressed){
+                sf::Vector2i mousePos = sf::Mouse::getPosition(app);
+                int x = (int)((mousePos.x - offsetX) / squareSize);
+                int y = (int)((mousePos.y - offsetY) / squareSize);
+                if(x < map_size_x && x >= 0 && y < map_size_y && y >= 0){
+                    if(e.key.code == sf::Keyboard::Space){
+                        if(real_board[y][x] == 10){  // If the tile is hidden
+                            real_board[y][x] = 9;    // Place a flag
+                        } else if(real_board[y][x] == 9){  // If already flagged
+                            real_board[y][x] = 10;   // Remove the flag
+                        }
+                    }
+                }
+            }
         }
+
+        // Redraw the board
         app.clear(sf::Color::Black);
 
         for(int i = 0; i < map_size_y; i++){
@@ -114,13 +161,21 @@ void loop(){
                 rectangle.setOutlineThickness(1);
                 app.draw(rectangle);
 
-                if(board[i][j] == -1){
+
+                if(real_board[i][j] == -1){
                     sf::Sprite sprite;
                     sprite.setTexture(mine);
                     sprite.scale(sf::Vector2f((float)squareSize / (float)mine.getSize().x, (float)squareSize / (float)mine.getSize().y));
                     sprite.setPosition(sf::Vector2f(offsetX + j * squareSize, offsetY + i * squareSize));
                     app.draw(sprite);
-                } else { // Only draw text if there are adjacent mines
+                } else if(real_board[i][j] == 9){
+                    sf::Sprite sprite;
+                    sprite.setTexture(flag);
+                    sprite.scale(sf::Vector2f((float)squareSize / (float)flag.getSize().x, (float)squareSize / (float)flag.getSize().y));
+                    sprite.setPosition(sf::Vector2f(offsetX + j * squareSize, offsetY + i * squareSize));
+                    app.draw(sprite);
+                } else if(real_board[i][j] > 0 && real_board[i][j] < 9) {
+                    // Draw number for adjacent mines
                     sf::Color colors[] = {
                         sf::Color::Blue,
                         sf::Color::Green,
@@ -133,10 +188,9 @@ void loop(){
                     };
                     sf::Text text;
                     text.setFont(font);
-                    text.setString(to_string(board[i][j]));  // Use the correct number of adjacent mines
-                    text.setCharacterSize(squareSize / 2);  // Adjust character size
-                    text.setFillColor(colors[board[i][j] - 1]);
-                    // Center the text within the square
+                    text.setString(to_string(hidden_board[i][j]));
+                    text.setCharacterSize(squareSize / 2);
+                    text.setFillColor(colors[hidden_board[i][j] - 1]);
                     sf::FloatRect textRect = text.getLocalBounds();
                     text.setOrigin(textRect.left + textRect.width / 2.0f, textRect.top + textRect.height / 2.0f);
                     text.setPosition(sf::Vector2f(offsetX + j * squareSize + squareSize / 2, offsetY + i * squareSize + squareSize / 2));
@@ -144,18 +198,21 @@ void loop(){
                 }
             }
         }
+
         app.display();
     }
 }
 
 
+
 int main(){
+    // cout << flag.loadFromFile("icons/flag.png") << endl;
     flag.loadFromFile("icons/flag.png");
     mine.loadFromFile("icons/mine.png");
     font.loadFromFile("arial.ttf");
     generateMap();
-    placeMineCount();
-    printBoard();
+    // placeMineCount();
+    // printBoard();
     // cout << countMines() << endl;
     loop();
     return 0;
