@@ -29,6 +29,9 @@ sf::Texture flag;
 sf::Font font;
 
 
+bool checkGame = false;
+enum GameState  {Playing, Won, Lost};
+GameState gs = Playing;
 
 bool isValid(int row, int col) {
     return (row >= 0 && row < map_size_y && col >= 0 && col < map_size_x);
@@ -104,6 +107,17 @@ int countMines() {
     }
     return mineCount;
 }
+
+bool checkWin(){
+    for(int i = 0; i < map_size_y; i++){
+        for(int j = 0; j < map_size_x; j++){
+            if(real_board[i][j] == 10 && hidden_board[i][j] != -1){
+                return false;
+            }
+        }
+    }
+    return true;
+}
 void openAllPos(int row, int col){
     if(!isValid(row, col) || real_board[row][col] != 10){
         return;
@@ -119,6 +133,9 @@ void openAllPos(int row, int col){
         openAllPos(row + dx[x], col + dy[x]);
     }
 }
+bool gameOver(){
+    return checkGame;
+}
 void loop(){
     sf::Event e;
     while(app.isOpen()){
@@ -126,30 +143,38 @@ void loop(){
             if(e.type == sf::Event::Closed){
                 app.close();
             }
-            if(e.type == sf::Event::MouseButtonPressed){
-                int x = (int)((e.mouseButton.x - offsetX) / squareSize);
-                int y = (int)((e.mouseButton.y - offsetY) / squareSize);
+            if(gs == Playing){
+                if(e.type == sf::Event::MouseButtonPressed){
+                    int x = (int)((e.mouseButton.x - offsetX) / squareSize);
+                    int y = (int)((e.mouseButton.y - offsetY) / squareSize);
 
-                if(x < map_size_x && x >= 0 && y < map_size_y && y >= 0){
-                    if(e.mouseButton.button == sf::Mouse::Right){
-                        // Toggle flag
-                        if(real_board[y][x] == 10){  // If the tile is hidden
-                            real_board[y][x] = 9;    // Place a flag
-                        } else if(real_board[y][x] == 9){  // If already flagged
-                            real_board[y][x] = 10;   // Remove the flag
+                    if(x < map_size_x && x >= 0 && y < map_size_y && y >= 0){
+                        if(e.mouseButton.button == sf::Mouse::Right){
+                            // Toggle flag
+                            if(real_board[y][x] == 10){  // If the tile is hidden
+                                real_board[y][x] = 9;    // Place a flag
+                            } else if(real_board[y][x] == 9){  // If already flagged
+                                real_board[y][x] = 10;   // Remove the flag
+                            }
                         }
-                    }
-                    if(e.mouseButton.button == sf::Mouse::Left){
-                        if(hidden_board[y][x] == -1){
-                            real_board[y][x] = -1;
-                        } else {
-                            // real_board[y][x] = hidden_board[y][x];
-                            openAllPos(y, x);
+                        if(e.mouseButton.button == sf::Mouse::Left){
+                            if(real_board[y][x] != 9){
+                                if(hidden_board[y][x] == -1){
+                                    real_board[y][x] = -1;
+                                    gs = Lost;
+                                } else {
+                                    // real_board[y][x] = hidden_board[y][x];
+                                    openAllPos(y, x);
+                                    if(checkWin()){
+                                        gs = Won;
+                                    }
+                                }   
+                            } 
                         }
                     }
                 }
             }
-            if(e.type == sf::Event::KeyPressed){
+            if(e.type == sf::Event::KeyPressed && gs == Playing){
                 sf::Vector2i mousePos = sf::Mouse::getPosition(app);
                 int x = (int)((mousePos.x - offsetX) / squareSize);
                 int y = (int)((mousePos.y - offsetY) / squareSize);
@@ -180,9 +205,11 @@ void loop(){
 
                 if(real_board[i][j] == -1){
                     sf::Sprite sprite;
+                    rectangle.setFillColor(sf::Color::Red);
                     sprite.setTexture(mine);
                     sprite.scale(sf::Vector2f((float)squareSize / (float)mine.getSize().x, (float)squareSize / (float)mine.getSize().y));
                     sprite.setPosition(sf::Vector2f(offsetX + j * squareSize, offsetY + i * squareSize));
+                    app.draw(rectangle);
                     app.draw(sprite);
                 } else if(real_board[i][j] == 9){
                     sf::Sprite sprite;
@@ -222,6 +249,17 @@ void loop(){
                 }
             }
         }
+        if (gs == Won || gs == Lost) {
+            sf::Text endText;
+            endText.setFont(font);
+            endText.setCharacterSize(50);
+            endText.setFillColor(sf::Color::Red);
+            endText.setString(gs == Won ? "You Win!" : "Game Over!");
+            sf::FloatRect textRect = endText.getLocalBounds();
+            endText.setOrigin(textRect.left + textRect.width / 2.0f, textRect.top + textRect.height / 2.0f);
+            endText.setPosition(sf::Vector2f(windowX / 2.0f, windowY / 2.0f));
+            app.draw(endText);
+        }
 
         app.display();
     }
@@ -239,5 +277,6 @@ int main(){
     // printBoard();
     // cout << countMines() << endl;
     loop();
+    // loop();
     return 0;
 }
