@@ -104,6 +104,21 @@ int countMines() {
     }
     return mineCount;
 }
+void openAllPos(int row, int col){
+    if(!isValid(row, col) || real_board[row][col] != 10){
+        return;
+    }
+    int dx[8] = { -1, -1, -1, 0, 0, 1, 1, 1 };
+    int dy[8] = { -1, 0, 1, -1, 1, -1, 0, 1 };
+    real_board[row][col] = hidden_board[row][col];
+
+    if(hidden_board[row][col] > 0){
+        return;
+    }
+    for(int x = 0; x < 8; x++){
+        openAllPos(row + dx[x], col + dy[x]);
+    }
+}
 void loop(){
     sf::Event e;
     while(app.isOpen()){
@@ -128,7 +143,8 @@ void loop(){
                         if(hidden_board[y][x] == -1){
                             real_board[y][x] = -1;
                         } else {
-                            real_board[y][x] = hidden_board[y][x];
+                            // real_board[y][x] = hidden_board[y][x];
+                            openAllPos(y, x);
                         }
                     }
                 }
@@ -183,9 +199,9 @@ void loop(){
                         sf::Color::Magenta,
                         sf::Color::Cyan,
                         sf::Color::Yellow,
-                        sf::Color::White,
                         sf::Color::Black
                     };
+                    rectangle.setFillColor(sf::Color::White);
                     sf::Text text;
                     text.setFont(font);
                     text.setString(to_string(hidden_board[i][j]));
@@ -194,7 +210,15 @@ void loop(){
                     sf::FloatRect textRect = text.getLocalBounds();
                     text.setOrigin(textRect.left + textRect.width / 2.0f, textRect.top + textRect.height / 2.0f);
                     text.setPosition(sf::Vector2f(offsetX + j * squareSize + squareSize / 2, offsetY + i * squareSize + squareSize / 2));
+                    app.draw(rectangle);
                     app.draw(text);
+                } else if(real_board[i][j] == 0){
+                    sf::RectangleShape rectangle(sf::Vector2f(squareSize, squareSize));
+                    rectangle.setFillColor(sf::Color::White);
+                    rectangle.setPosition(sf::Vector2f(offsetX + j * squareSize, offsetY + i * squareSize));
+                    rectangle.setOutlineColor(sf::Color::Black);
+                    rectangle.setOutlineThickness(1);
+                    app.draw(rectangle);
                 }
             }
         }
