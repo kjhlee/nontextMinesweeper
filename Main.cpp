@@ -185,6 +185,7 @@ void loop() {
                     } 
                     else if(real_board[i][j] == 9){  // Tile is flagged
                         sf::Sprite sprite;
+                        rectangle.setFillColor(Grey);
                         sprite.setTexture(flag);
                         sprite.scale(sf::Vector2f((float)squareSize / (float)flag.getSize().x, (float)squareSize / (float)flag.getSize().y));
                         sprite.setPosition(sf::Vector2f(offsetX + j * squareSize, offsetY + i * squareSize));
